@@ -1,0 +1,152 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<Meta name="ExplicitAutoJoints">true</Meta>
+	<External>null</External>
+	<External>nil</External>
+	<Item class="Script" referent="RBX0">
+		<Properties>
+			<bool name="Anchored">false</bool>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapability name="Capabilities">0</SecurityCapability>
+			<bool name="DefinesCapabilities">false</bool>
+			<bool name="Disabled">false</bool>
+			<Content name="LinkedSource"><null></null></Content>
+			<string name="Name">Main</string>
+			<token name="RunContext">0</token>
+			<string name="ScriptGuid">{00000000-0000-0000-0000-000000000000}</string>
+			<ProtectedString name="Source"><![CDATA[--[[ Chip Bridge - Fetches code from Chip via Cloudflare ]] 
+
+local HttpService = game:GetService("HttpService")
+local toolbar = plugin:CreateToolbar("Chip Bridge")
+local button = toolbar:CreateButton("Get from Chip", "Get latest code from Chip", "rbxassetid://0")
+
+local SCREEN_GUI_NAME = "ChipBridgeGui"
+local BASE_URL = "https://chip-roblox.pages.dev/api"
+
+local function createGui()
+    local existing = game:GetService("CoreGui"):FindFirstChild(SCREEN_GUI_NAME)
+    if existing then existing:Destroy() end
+
+    local sg = Instance.new("ScreenGui")
+    sg.Name = SCREEN_GUI_NAME
+    sg.ResetOnSpawn = false
+    sg.Parent = game:GetService("CoreGui")
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 420, 0, 250)
+    frame.Position = UDim2.new(0.5, -210, 0.5, -125)
+    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    frame.BorderSizePixel = 0
+    frame.Parent = sg
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = frame
+
+    local title = Instance.new("TextLabel")
+    title.Text = "Chip Bridge"
+    title.Size = UDim2.new(1, 0, 0, 40)
+    title.BackgroundTransparency = 1
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 18
+    title.Font = Enum.Font.GothamBold
+    title.Parent = frame
+
+    local status = Instance.new("TextLabel")
+    status.Text = "Click to check for new code from Chip!"
+    status.Size = UDim2.new(1, -20, 0, 50)
+    status.Position = UDim2.new(0, 10, 0, 50)
+    status.BackgroundTransparency = 1
+    status.TextColor3 = Color3.fromRGB(150, 150, 150)
+    status.TextSize = 14
+    status.Font = Enum.Font.Gotham
+    status.TextWrapped = true
+    status.TextXAlignment = Enum.TextXAlignment.Center
+    status.Parent = frame
+
+    local fetchBtn = Instance.new("TextButton")
+    fetchBtn.Text = "Get Latest from Chip"
+    fetchBtn.Size = UDim2.new(1, -20, 0, 44)
+    fetchBtn.Position = UDim2.new(0, 10, 0, 110)
+    fetchBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    fetchBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fetchBtn.TextSize = 14
+    fetchBtn.Font = Enum.Font.GothamBold
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = fetchBtn
+    fetchBtn.Parent = frame
+
+    local codePreview = Instance.new("TextBox")
+    codePreview.Text = "-- Code will appear here..."
+    codePreview.Size = UDim2.new(1, -20, 0, 70)
+    codePreview.Position = UDim2.new(0, 10, 0, 165)
+    codePreview.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    codePreview.TextColor3 = Color3.fromRGB(200, 200, 200)
+    codePreview.TextSize = 11
+    codePreview.Font = Enum.Font.Code
+    codePreview.TextWrapped = true
+    codePreview.ClearTextOnFocus = false
+    codePreview.TextEditable = false
+    local cpCorner = Instance.new("UICorner")
+    cpCorner.CornerRadius = UDim.new(0, 6)
+    cpCorner.Parent = codePreview
+    codePreview.Parent = frame
+
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Text = "X"
+    closeBtn.Size = UDim2.new(0, 30, 0, 30)
+    closeBtn.Position = UDim2.new(1, -35, 0, 5)
+    closeBtn.BackgroundTransparency = 1
+    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    closeBtn.TextSize = 16
+    closeBtn.Parent = frame
+    closeBtn.MouseButton1Click:Connect(function() sg:Destroy() end)
+
+    local function showStatus(msg, color)
+        status.Text = msg
+        status.TextColor3 = color or Color3.fromRGB(150, 150, 150)
+    end
+
+    fetchBtn.MouseButton1Click:Connect(function()
+        showStatus("Checking for code from Chip...", Color3.fromRGB(255, 200, 100))
+        fetchBtn.Active = false
+        fetchBtn.Text = "Fetching..."
+
+        local success, response = pcall(function()
+            return HttpService:RequestAsync({ Url = BASE_URL .. "/latest", Method = "GET" })
+        end)
+
+        if not success then
+            showStatus("Error: " .. tostring(response), Color3.fromRGB(255, 100, 100))
+            fetchBtn.Active = true
+            fetchBtn.Text = "Get Latest from Chip"
+            return
+        end
+
+        if response.StatusCode == 200 then
+            local body = HttpService:JSONDecode(response.Body)
+            if body.status == "ready" then
+                local code = body.code or "-- No code"
+                local prompt = body.prompt or "Roblox feature"
+                showStatus("Got code from Chip! (v" .. tostring(body.version) .. ")", Color3.fromRGB(100, 255, 100))
+                codePreview.Text = code:sub(1, 500) .. (code:len() > 500 and "..." or "")
+                local script = Instance.new("Script")
+                script.Name = "Chip_v" .. tostring(body.version)
+                script.Source = "-- Built by Chip for: " .. prompt .. "\n\n" .. code
+                script.Parent = game:GetService("ServerScriptService")
+            elseif body.status == "empty" then
+                showStatus("No code yet. Ask Chip in Telegram!", Color3.fromRGB(255, 200, 100))
+            end
+        end
+
+        fetchBtn.Active = true
+        fetchBtn.Text = "Get Latest from Chip"
+    end)
+end
+
+button.Click:Connect(createGui)
+print("[Chip Bridge] Plugin loaded!")]]></ProtectedString>
+			<BinaryString name="Tags"></BinaryString>
+		</Properties>
+	</Item>
+</roblox>
