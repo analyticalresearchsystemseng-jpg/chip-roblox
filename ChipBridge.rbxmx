@@ -13,7 +13,7 @@
 			<string name="Name">Main</string>
 			<token name="RunContext">0</token>
 			<string name="ScriptGuid">{00000000-0000-0000-0000-000000000000}</string>
-			<ProtectedString name="Source"><![CDATA[--[[ Chip Bridge - Fetches code from Chip via Cloudflare ]] 
+			<ProtectedString name="Source"><![CDATA[--[[ Chip Bridge v3.1 - Named scripts ]] 
 
 local HttpService = game:GetService("HttpService")
 local toolbar = plugin:CreateToolbar("Chip Bridge")
@@ -21,6 +21,8 @@ local button = toolbar:CreateButton("Get from Chip", "Get latest code from Chip"
 
 local SCREEN_GUI_NAME = "ChipBridgeGui"
 local BASE_URL = "https://chip.rosscloudprojects.app"
+local currentCode = ""
+local currentScriptName = ""
 
 local function createGui()
     local existing = game:GetService("CoreGui"):FindFirstChild(SCREEN_GUI_NAME)
@@ -32,80 +34,149 @@ local function createGui()
     sg.Parent = game:GetService("CoreGui")
 
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 420, 0, 250)
-    frame.Position = UDim2.new(0.5, -210, 0.5, -125)
-    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    frame.Size = UDim2.new(0, 650, 0, 500)
+    frame.Position = UDim2.new(0.5, -325, 0.5, -250)
+    frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     frame.BorderSizePixel = 0
     frame.Parent = sg
 
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
+    corner.CornerRadius = UDim.new(0, 10)
     corner.Parent = frame
+
+    local titleBar = Instance.new("Frame")
+    titleBar.Size = UDim2.new(1, 0, 0, 40)
+    titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    titleBar.BorderSizePixel = 0
+    titleBar.Parent = frame
 
     local title = Instance.new("TextLabel")
     title.Text = "Chip Bridge"
-    title.Size = UDim2.new(1, 0, 0, 40)
+    title.Size = UDim2.new(1, -50, 1, 0)
+    title.Position = UDim2.new(0, 15, 0, 0)
     title.BackgroundTransparency = 1
-    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextColor3 = Color3.fromRGB(0, 170, 255)
     title.TextSize = 18
     title.Font = Enum.Font.GothamBold
-    title.Parent = frame
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = titleBar
+
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Text = "X"
+    closeBtn.Size = UDim2.new(0, 35, 0, 35)
+    closeBtn.Position = UDim2.new(1, -40, 0, 2)
+    closeBtn.BackgroundTransparency = 1
+    closeBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+    closeBtn.TextSize = 20
+    closeBtn.Parent = titleBar
+    closeBtn.MouseButton1Click:Connect(function() sg:Destroy() end)
 
     local status = Instance.new("TextLabel")
-    status.Text = "Click to check for new code from Chip!"
-    status.Size = UDim2.new(1, -20, 0, 50)
+    status.Text = "Click 'Get Latest' to fetch code from Chip!"
+    status.Size = UDim2.new(1, -20, 0, 30)
     status.Position = UDim2.new(0, 10, 0, 50)
     status.BackgroundTransparency = 1
-    status.TextColor3 = Color3.fromRGB(150, 150, 150)
-    status.TextSize = 14
+    status.TextColor3 = Color3.fromRGB(200, 200, 200)
+    status.TextSize = 13
     status.Font = Enum.Font.Gotham
     status.TextWrapped = true
-    status.TextXAlignment = Enum.TextXAlignment.Center
+    status.TextXAlignment = Enum.TextXAlignment.Left
     status.Parent = frame
+
+    local buttonRow = Instance.new("Frame")
+    buttonRow.Size = UDim2.new(1, -20, 0, 40)
+    buttonRow.Position = UDim2.new(0, 10, 0, 85)
+    buttonRow.BackgroundTransparency = 1
+    buttonRow.Parent = frame
 
     local fetchBtn = Instance.new("TextButton")
     fetchBtn.Text = "Get Latest from Chip"
-    fetchBtn.Size = UDim2.new(1, -20, 0, 44)
-    fetchBtn.Position = UDim2.new(0, 10, 0, 110)
+    fetchBtn.Size = UDim2.new(0, 200, 1, 0)
     fetchBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
     fetchBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     fetchBtn.TextSize = 14
     fetchBtn.Font = Enum.Font.GothamBold
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 6)
-    btnCorner.Parent = fetchBtn
-    fetchBtn.Parent = frame
+    local fbCorner = Instance.new("UICorner")
+    fbCorner.CornerRadius = UDim.new(0, 6)
+    fbCorner.Parent = fetchBtn
+    fetchBtn.Parent = buttonRow
 
-    local codePreview = Instance.new("TextBox")
-    codePreview.Text = "-- Code will appear here..."
-    codePreview.Size = UDim2.new(1, -20, 0, 70)
-    codePreview.Position = UDim2.new(0, 10, 0, 165)
-    codePreview.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-    codePreview.TextColor3 = Color3.fromRGB(200, 200, 200)
-    codePreview.TextSize = 11
-    codePreview.Font = Enum.Font.Code
-    codePreview.TextWrapped = true
-    codePreview.ClearTextOnFocus = false
-    codePreview.TextEditable = false
-    local cpCorner = Instance.new("UICorner")
-    cpCorner.CornerRadius = UDim.new(0, 6)
-    cpCorner.Parent = codePreview
-    codePreview.Parent = frame
+    local selectBtn = Instance.new("TextButton")
+    selectBtn.Text = "Select All Code"
+    selectBtn.Size = UDim2.new(0, 160, 1, 0)
+    selectBtn.Position = UDim2.new(0, 210, 0, 0)
+    selectBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    selectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    selectBtn.TextSize = 14
+    selectBtn.Font = Enum.Font.GothamBold
+    selectBtn.Visible = false
+    selectBtn.Parent = buttonRow
 
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Text = "X"
-    closeBtn.Size = UDim2.new(0, 30, 0, 30)
-    closeBtn.Position = UDim2.new(1, -35, 0, 5)
-    closeBtn.BackgroundTransparency = 1
-    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeBtn.TextSize = 16
-    closeBtn.Parent = frame
-    closeBtn.MouseButton1Click:Connect(function() sg:Destroy() end)
+    local insertBtn = Instance.new("TextButton")
+    insertBtn.Text = "Insert to Script"
+    insertBtn.Size = UDim2.new(0, 160, 1, 0)
+    insertBtn.Position = UDim2.new(0, 380, 0, 0)
+    insertBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 80)
+    insertBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    insertBtn.TextSize = 14
+    insertBtn.Font = Enum.Font.GothamBold
+    insertBtn.Visible = false
+    insertBtn.Parent = buttonRow
+
+    local scrollFrame = Instance.new("ScrollingFrame")
+    scrollFrame.Size = UDim2.new(1, -20, 1, -170)
+    scrollFrame.Position = UDim2.new(0, 10, 0, 135)
+    scrollFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    scrollFrame.BorderSizePixel = 0
+    scrollFrame.ScrollBarThickness = 8
+    scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scrollFrame.Parent = frame
+
+    local sfCorner = Instance.new("UICorner")
+    sfCorner.CornerRadius = UDim.new(0, 8)
+    sfCorner.Parent = scrollFrame
+
+    local codeBox = Instance.new("TextBox")
+    codeBox.Text = "-- Code will appear here...\n-- Click 'Get Latest from Chip' to fetch!"
+    codeBox.Size = UDim2.new(1, -20, 1, -10)
+    codeBox.Position = UDim2.new(0, 5, 0, 5)
+    codeBox.BackgroundTransparency = 1
+    codeBox.TextColor3 = Color3.fromRGB(220, 220, 220)
+    codeBox.TextSize = 12
+    codeBox.Font = Enum.Font.Code
+    codeBox.TextWrapped = false
+    codeBox.ClearTextOnFocus = false
+    codeBox.TextEditable = true
+    codeBox.MultiLine = true
+    codeBox.TextXAlignment = Enum.TextXAlignment.Left
+    codeBox.TextYAlignment = Enum.TextYAlignment.Top
+    codeBox.Parent = scrollFrame
 
     local function showStatus(msg, color)
         status.Text = msg
-        status.TextColor3 = color or Color3.fromRGB(150, 150, 150)
+        status.TextColor3 = color or Color3.fromRGB(200, 200, 200)
     end
+
+    selectBtn.MouseButton1Click:Connect(function()
+        codeBox:CaptureFocus()
+        codeBox.CursorPosition = 1
+        codeBox.SelectionStart = #codeBox.Text + 1
+        showStatus("Code selected! Press Ctrl+C to copy", Color3.fromRGB(100, 255, 100))
+    end)
+
+    insertBtn.MouseButton1Click:Connect(function()
+        if currentCode == "" then
+            showStatus("No code to insert. Fetch first!", Color3.fromRGB(255, 100, 100))
+            return
+        end
+        local scriptName = currentScriptName or "Chip_Code"
+        local localScript = Instance.new("LocalScript")
+        localScript.Name = scriptName
+        localScript.Source = currentCode
+        localScript.Parent = game:GetService("StarterGui")
+        showStatus("Inserted '" .. scriptName .. "' into StarterGui!", Color3.fromRGB(100, 255, 100))
+    end)
 
     fetchBtn.MouseButton1Click:Connect(function()
         showStatus("Checking for code from Chip...", Color3.fromRGB(255, 200, 100))
@@ -113,7 +184,10 @@ local function createGui()
         fetchBtn.Text = "Fetching..."
 
         local success, response = pcall(function()
-            return HttpService:RequestAsync({ Url = BASE_URL .. "/api/latest", Method = "GET" })
+            return HttpService:RequestAsync({
+                Url = BASE_URL .. "/api/latest",
+                Method = "GET"
+            })
         end)
 
         if not success then
@@ -128,15 +202,24 @@ local function createGui()
             if body.status == "ready" then
                 local code = body.code or "-- No code"
                 local prompt = body.prompt or "Roblox feature"
-                showStatus("Got code from Chip! (v" .. tostring(body.version) .. ")", Color3.fromRGB(100, 255, 100))
-                codePreview.Text = code:sub(1, 500) .. (code:len() > 500 and "..." or "")
-                local script = Instance.new("Script")
-                script.Name = "Chip_v" .. tostring(body.version)
-                script.Source = "-- Built by Chip for: " .. prompt .. "\n\n" .. code
-                script.Parent = game:GetService("ServerScriptService")
+
+                currentCode = code
+                currentScriptName = body.scriptName or "Chip_Code"
+                codeBox.Text = "-- Built by Chip for: " .. prompt .. "\n-- Version: " .. tostring(body.version) .. "\n-- Name: " .. currentScriptName .. "\n\n" .. code
+                codeBox.TextEditable = true
+
+                showStatus("Got code! Click 'Select All' then Ctrl+C to copy", Color3.fromRGB(100, 255, 100))
+                selectBtn.Visible = true
+                insertBtn.Visible = true
+
             elseif body.status == "empty" then
+                codeBox.Text = "-- No code yet.\n-- Ask Chip in Telegram to build something!"
                 showStatus("No code yet. Ask Chip in Telegram!", Color3.fromRGB(255, 200, 100))
+                selectBtn.Visible = false
+                insertBtn.Visible = false
             end
+        else
+            showStatus("Server error: " .. response.StatusCode, Color3.fromRGB(255, 100, 100))
         end
 
         fetchBtn.Active = true
@@ -145,7 +228,7 @@ local function createGui()
 end
 
 button.Click:Connect(createGui)
-print("[Chip Bridge] Plugin loaded!")]]></ProtectedString>
+print("[Chip Bridge v3.1] Plugin loaded!")]]></ProtectedString>
 			<BinaryString name="Tags"></BinaryString>
 		</Properties>
 	</Item>
