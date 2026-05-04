@@ -20,7 +20,7 @@ local toolbar = plugin:CreateToolbar("Chip Bridge")
 local button = toolbar:CreateButton("Get from Chip", "Get latest code from Chip", "rbxassetid://0")
 
 local SCREEN_GUI_NAME = "ChipBridgeGui"
-local BASE_URL = "https://chip-roblox.pages.dev/api"
+local BASE_URL = "https://chip.rosscloudprojects.app"
 
 local function createGui()
     local existing = game:GetService("CoreGui"):FindFirstChild(SCREEN_GUI_NAME)
@@ -113,7 +113,7 @@ local function createGui()
         fetchBtn.Text = "Fetching..."
 
         local success, response = pcall(function()
-            return HttpService:RequestAsync({ Url = BASE_URL .. "/latest", Method = "GET" })
+            return HttpService:RequestAsync({ Url = BASE_URL .. "/api/latest", Method = "GET" })
         end)
 
         if not success then
